@@ -8,10 +8,10 @@
 - **多票据上传**：支持一次上传多张发票与相关佐证材料（如行程单、差旅单）。
 - **OCR 提取**：优先调用**百度增值税发票 OCR**，可配置离线/备用 OCR（例如 Tesseract）。
 - **发票验真**：对票面信息进行结构化校验与（可配置的）验真流程。
-- **知识库对照**：从本地知识库（Markdown/HTML/TXT）检索相关规则与口径，辅助 LLM 做合规判断与提示。
-- **费用类型与会计科目建议**：根据发票项目与上下文生成建议，尽可能贴合公司口径。
-- **风险扫描**：如**超期报销**、**金额不一致**、**缺佐证**、**重复报销**（可配合历史记录）等。
-- **结果可视化**：前端页面展示关键要素、风险点与建议；支持导出 CSV/Excel（如已实现）。
+- **知识库对照**：从本地或云服务器存储的知识库（Markdown/HTML/TXT）检索相关规则与口径，辅助 LLM 做合规判断与提示。（后续迭代考虑链接企业飞书知识库API）
+- **费用类型与会计科目建议**：LLM根据发票项目与上下文生成会计科目建议，尽可能贴合公司口径。
+- **风险扫描**：如**超期报销**、**金额不一致**、**缺佐证**、**重复报销**（后续迭代，配合历史记录）等。
+- **结果可视化**：前端页面展示关键要素、风险点与建议；支持导出 CSV/Excel。
 - **轻量后端**：基于 **FastAPI** 提供 HTTP API；本地开发与云端部署都很顺手。
 
 ---
@@ -27,7 +27,7 @@ FastAPI 网关 (api_app.py)
 │  /api/invoices
 ▼
 业务引擎 (app.py / reimbursement_processor.py)
-├─ OCR 适配器 (baidu_vat_client.py / invoice_extractor.py)
+├─ OCR 适配器 (invoice_extractor.py)
 ├─ 发票验真 (invoice_verifier.py)
 ├─ 规则检索 (knowledge_retriever.py)  ← 本地知识库
 └─ 费用/科目分析 (expense_analyzer.py) ← 可调用 LLM
@@ -43,7 +43,6 @@ FastAPI 网关 (api_app.py)
 .
 ├─ api_app.py                  # FastAPI 入口与路由（/api/invoices 等）
 ├─ app.py                      # 应用装配/统一编排（agent/管线）
-├─ baidu_vat_client.py         # 百度增值税发票 OCR 客户端
 ├─ invoice_extractor.py        # OCR 抽取 orchestrator（含兜底与清洗）
 ├─ invoice_verifier.py         # 验真与规则级校验
 ├─ expense_analyzer.py         # 费用类型/会计科目分析（可调用 LLM）
@@ -52,7 +51,7 @@ FastAPI 网关 (api_app.py)
 ├─ index.html                  # 前端页面
 ├─ script.js                   # 前端交互逻辑（上传/渲染/下载）
 ├─ requirements.txt            # Python 依赖
-└─ knowledge_base/             # ← 你自建的知识库目录（建议）
+└─ knowledge_base/             # ← 自建的知识库（目前支持存储在本地、ECS云服务器、GitHub Pages）
 ├─ 会计科目口径手册_rag版.md
 ├─ 发票验真要点_rag版.md
 ├─ 公司报销制度.md
