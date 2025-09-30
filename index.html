@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发票报销智能助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+      @keyframes progress {
+        0% { width: 0%; }
+        100% { width: 100%; }
+      }
+      
+      .animate-progress {
+        animation: progress 3s ease-in-out infinite;
+      }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        accent: '#F59E0B',
+                        danger: '#EF4444',
+                        success: '#10B981',
+                        warning: '#F59E0B'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+        <div class="px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-center items-center h-16 relative">
+                <div class="flex items-center space-x-3 absolute left-0">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-receipt text-white text-lg"></i>
+                    </div>
+                </div>
+                <div class="flex-1 flex justify-center">
+                    <h1 class="text-3xl font-bold text-gray-900 text-center">发票报销智能助手</h1>
+                </div>
+                <div class="flex items-center space-x-4 absolute right-0">
+                    <button class="text-gray-500 hover:text-gray-700 transition-colors">
+                        <i class="fas fa-question-circle text-lg"></i>
+                    </button>
+                    <button class="text-gray-500 hover:text-gray-700 transition-colors">
+                        <i class="fas fa-cog text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 全屏布局 -->
+    <div class="flex h-[calc(100vh-80px)]">
+        <!-- 左列：上传区域 -->
+        <div class="w-1/2 overflow-hidden p-4">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 h-full flex flex-col">
+                <div class="p-3 flex-[2] flex flex-col min-h-0">
+                    <h2 class="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                        <i class="fas fa-cloud-upload-alt text-primary mr-2 text-sm"></i>
+                        上传文件
+                    </h2>
+                    
+                    <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer bg-gray-50 hover:bg-blue-50 flex-1 flex flex-col justify-center">
+                        <div class="space-y-4">
+                            <div class="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
+                                <i class="fas fa-cloud-upload-alt text-2xl text-primary"></i>
+                            </div>
+                            <div>
+                                <p class="text-lg font-medium text-gray-700">拖拽或点击上传</p>
+                                <p class="text-sm text-gray-500 mt-2">上传发票及佐证文件，最多上传5个</p>
+                                <p class="text-sm text-gray-400">支持 JPG, PNG, PDF 格式，单个文件不超过10MB</p>
+                            </div>
+                            <button id="selectFileBtn" class="bg-primary text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
+                                <i class="fas fa-folder-open mr-2"></i>
+                                选择文件
+                            </button>
+                        </div>
+                        <input id="fileInput" type="file" multiple accept=".jpg,.jpeg,.png,.pdf" class="hidden" />
+                        <div id="fileList" class="space-y-2 mt-3"></div>
+                        <div class="flex items-center justify-between mt-3">
+                          <button id="clearFilesBtn" class="px-3 py-2 text-sm border rounded-md text-gray-600 hover:bg-gray-50">清空文件</button>
+                          <button id="startAnalysisBtn" class="px-4 py-2 text-sm bg-primary text-white rounded-md hover:bg-blue-600 disabled:opacity-60">
+                            <i class="fas fa-rocket mr-2"></i>开始分析
+                          </button>
+                        </div>
+                        
+                        <!-- 隐藏的占位元素 -->
+                        <div id="loadingMask" class="hidden"></div>
+                        <div id="loadingPane" class="hidden"></div>
+                        <div id="resultPane" class="hidden"></div>
+                    </div>
+                </div>
+
+                <!-- 报销说明 -->
+                <div class="p-3 flex-1 border-t border-gray-100 min-h-0 flex flex-col">
+                    <label class="text-sm font-medium text-gray-700 mb-2 block">报销说明</label>
+                    <textarea id="noteTextarea"
+                        class="w-full flex-1 p-3 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                        placeholder="请说明该笔费用的用途和背景等信息……"
+                    ></textarea>
+                    
+                    <!-- 隐藏的占位元素 -->
+                    <div id="invoice-number" class="hidden"></div>
+                    <div id="invoice-date" class="hidden"></div>
+                    <div id="seller-name" class="hidden"></div>
+                    <div id="buyer-name" class="hidden"></div>
+                    <div id="tax-rate" class="hidden"></div>
+                    <div id="amount-excl" class="hidden"></div>
+                    <div id="tax-amount" class="hidden"></div>
+                    <div id="amount-incl" class="hidden"></div>
+                    <div id="account-subject" class="hidden"></div>
+                    <div id="account-basis" class="hidden"></div>
+                    <div id="account-suggestions" class="hidden"></div>
+                    <div id="risk-points" class="hidden"></div>
+                    <div id="risk-basis" class="hidden"></div>
+                    <div id="risk-level" class="hidden"></div>
+                    <div id="approval-notes" class="hidden"></div>
+                    <div id="approval-basis" class="hidden"></div>
+                    <div id="verify-msg" class="hidden"></div>
+                    <div id="kw-candidates" class="hidden"></div>
+                    <div id="policy-warnings" class="hidden"></div>
+                    <div id="processed-time" class="hidden"></div>
+                    <div id="sources-used" class="hidden"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右列：空状态背景 -->
+        <div class="w-1/2 border-l border-gray-200 overflow-y-auto p-4">
+          <div id="rightPanel" class="h-full bg-gradient-to-br from-gray-100 via-blue-50 to-gray-100 rounded-xl flex items-center justify-center relative overflow-hidden">
+            <div id="initialContent" class="text-center z-10 max-w-md">
+              <div class="absolute inset-0 opacity-10">
+                <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, rgba(59, 130, 246, 0.3) 1px, transparent 0); background-size: 20px 20px;"></div>
+                <div class="absolute top-10 left-10 w-20 h-20 bg-blue-200 rounded-full opacity-50"></div>
+                <div class="absolute top-32 right-16 w-12 h-12 bg-gray-300 rounded-full opacity-40"></div>
+                <div class="absolute bottom-20 left-20 w-16 h-16 bg-blue-300 rounded-full opacity-30"></div>
+                <div class="absolute bottom-32 right-32 w-8 h-8 bg-gray-400 rounded-full opacity-50"></div>
+              </div>
+
+              <div class="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
+                <i class="fas fa-calculator text-white text-5xl"></i>
+              </div>
+              <h3 class="text-2xl font-bold text-gray-700 mb-4">智能分析等待中</h3>
+              <p class="text-gray-500 text-lg mb-2">上传发票后，系统将自动为您：</p>
+              <div class="space-y-3 text-left max-w-xs mx-auto">
+                <div class="flex items-center space-x-3 text-gray-600"><div class="w-2 h-2 bg-blue-500 rounded-full"></div><span class="text-sm">识别发票信息</span></div>
+                <div class="flex items-center space-x-3 text-gray-600"><div class="w-2 h-2 bg-blue-500 rounded-full"></div><span class="text-sm">分析费用类型</span></div>
+                <div class="flex items-center space-x-3 text-gray-600"><div class="w-2 h-2 bg-blue-500 rounded-full"></div><span class="text-sm">推荐会计科目</span></div>
+                <div class="flex items-center space-x-3 text-gray-600"><div class="w-2 h-2 bg-blue-500 rounded-full"></div><span class="text-sm">风险评估提示</span></div>
+                <div class="flex items-center space-x-3 text-gray-600"><div class="w-2 h-2 bg-blue-500 rounded-full"></div><span class="text-sm">审核要点建议</span></div>
+              </div>
+              <div class="absolute bottom-4 right-4 text-gray-400 text-xs opacity-60">
+                <i class="fas fa-magic mr-1"></i>AI 智能助手
+              </div>
+            </div>
+
+            <!-- 加载中遮罩 -->
+            <div id="loadingSpinner" class="hidden items-center justify-center absolute inset-0">
+              <div class="bg-white/70 backdrop-blur-sm p-6 rounded-xl border">
+                <div class="flex flex-col items-center">
+                  <div class="relative">
+                    <i class="fas fa-spinner fa-spin text-3xl text-blue-500"></i>
+                    <i class="fas fa-cog fa-spin text-xl text-blue-300 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></i>
+                  </div>
+                  <div class="mt-4 text-center">
+                    <div class="text-sm text-gray-600 font-medium">分析中，请稍候…</div>
+                    <div class="text-xs text-gray-500 mt-1">系统正在处理您的文件</div>
+                  </div>
+                  <div class="mt-3 w-32 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full bg-blue-500 rounded-full animate-progress"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 结果渲染容器（脚本写入位置） -->
+            <div id="resultsContainer" class="absolute inset-0 overflow-y-auto p-4 hidden"></div>
+          </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
